@@ -110,8 +110,6 @@
 
   <div class="page" id="page-rewards">
     <div class="page-header">兌換獎勵</div>
-    <div class="section-title">選擇小孩</div>
-    <div class="chip-row" id="reward-child-select"></div>
     <div id="reward-list"></div>
   </div>
 
@@ -282,32 +280,41 @@ function renderLog() {
       </button>`;
     }).join('');
 
-  const recent = [...(state.history||[])].reverse().slice(0, 15);
+  const history = state.history || [];
+  const recent = [...history].reverse().slice(0, 20);
   document.getElementById('history-list').innerHTML = recent.length === 0
     ? '<div class="empty-state">還沒有紀錄</div>'
-    : recent.map(h => {
+    : recent.map((h, i) => {
         const sign = h.pts >= 0 ? '+' : '';
         const cls = h.pts >= 0 ? 'pos' : 'neg';
+        const realIdx = history.length - 1 - i;
         return `<div class="log-item">
-          <div><div class="log-name">${h.child} — ${h.name}</div><div class="log-meta">${h.time}</div></div>
-          <span class="log-pts ${cls}">${sign}${h.pts}</span>
+          <div style="flex:1;min-width:0;">
+            <div class="log-name">${h.child} — ${h.name}</div>
+            <div class="log-meta">${h.time}</div>
+          </div>
+          <span class="log-pts ${cls}" style="margin:0 10px;">${sign}${h.pts}</span>
+          <span class="remove-chip" onclick="deleteHistory(${realIdx})">刪除</span>
         </div>`;
       }).join('');
 }
 
 function renderRewards() {
-  document.getElementById('reward-child-select').innerHTML =
-    state.children.map(c =>
-      `<span class="chip ${c.id===rewardChild?'sel':''}" onclick="selectRewardChild(${c.id})">${c.name}</span>`
-    ).join('');
-
-  const child = state.children.find(c => c.id === rewardChild);
-  const pts = child ? child.points : 0;
-  let html = `<div style="margin-bottom:1rem;font-size:14px;color:var(--text2)">目前積分：<strong style="color:var(--text);font-size:16px">${pts} 分</strong></div>`;
+  const total = state.children.reduce((sum, c) => sum + c.points, 0);
+  const each = state.children.map(c => `${c.name} ${c.points}分`).join('、');
+  let html = `<div class="card" style="margin-bottom:1rem;">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">合計積分</div>
+    <div style="font-size:36px;font-weight:600;color:var(--text)">${total}</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:6px;">${each}</div>
+  </div>`;
   html += state.rewards.map(r => {
-    const ok = pts >= r.cost;
+    const ok = total >= r.cost;
+    const each = Math.floor(r.cost / 2);
     return `<div class="card reward-row">
-      <div><div class="reward-name">${r.name}</div><div class="reward-cost">需要 ${r.cost} 分</div></div>
+      <div>
+        <div class="reward-name">${r.name}</div>
+        <div class="reward-cost">需要合計 ${r.cost} 分（各扣 ${each} 分）</div>
+      </div>
       <button class="redeem-btn ${ok?'ok':''}" ${ok?'':'disabled'} onclick="redeem(${r.id})">兌換</button>
     </div>`;
   }).join('');
@@ -359,7 +366,6 @@ function renderSettings() {
 }
 
 window.selectChild = (id) => { selectedChild = id; renderLog(); };
-window.selectRewardChild = (id) => { rewardChild = id; renderRewards(); };
 
 window.addPoints = async (bId) => {
   const b = state.behaviors.find(x => x.id === bId);
@@ -379,17 +385,25 @@ window.addPoints = async (bId) => {
 
 window.redeem = async (rId) => {
   const r = state.rewards.find(x => x.id === rId);
-  const c = state.children.find(x => x.id === rewardChild);
-  if(!r||!c||c.points<r.cost) return;
-  if(!confirm(`確定讓 ${c.name} 兌換「${r.name}」（扣 ${r.cost} 分）？`)) return;
-  c.points -= r.cost;
+  if(!r) return;
+  const total = state.children.reduce((sum, c) => sum + c.points, 0);
+  if(total < r.cost) return;
+  const each = Math.floor(r.cost / 2);
+  const names = state.children.map(c => c.name).join(' 和 ');
+  if(!confirm(`確定兌換「${r.name}」？\n${names} 各扣 ${each} 分`)) return;
   if(!state.history) state.history = [];
   const now = new Date();
-  state.history.push({
-    child: c.name, name: `兌換：${r.name}`, pts: -r.cost,
-    time: now.toLocaleDateString('zh-TW') + ' ' + now.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'})
+  const timeStr = now.toLocaleDateString('zh-TW') + ' ' + now.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
+  state.children.forEach(c => {
+    c.points = Math.max(0, c.points - each);
+    state.history.push({
+      id: Date.now() + c.id,
+      child: c.name, name: `兌換：${r.name}`, pts: -each,
+      time: timeStr
+    });
   });
-  showToast(`兌換成功！${c.name} 剩 ${c.points} 分`);
+  if(state.history.length > 100) state.history = state.history.slice(-100);
+  showToast(`兌換成功！各扣 ${each} 分`);
   await save();
 };
 
@@ -424,6 +438,18 @@ window.addReward = async () => {
 window.removeReward = async (id) => {
   if(!confirm('確定移除這個獎勵？')) return;
   state.rewards = state.rewards.filter(r => r.id !== id);
+  await save();
+};
+
+window.deleteHistory = async (idx) => {
+  if(!state.history || idx < 0 || idx >= state.history.length) return;
+  const h = state.history[idx];
+  if(!confirm(`確定刪除這筆紀錄？\n${h.child} — ${h.name} (${h.pts>=0?'+':''}${h.pts})`)) return;
+  // Reverse the points for this entry
+  const c = state.children.find(x => x.name === h.child);
+  if(c) c.points = Math.max(0, c.points - h.pts);
+  state.history.splice(idx, 1);
+  showToast('已刪除紀錄');
   await save();
 };
 
