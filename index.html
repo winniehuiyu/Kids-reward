@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Hudson & Mumu" />
+  <title>Hudson & Mumu 積分</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f0;
+      --bg3: #eeeee8;
+      --text: #1a1a18;
+      --text2: #6b6b65;
+      --text3: #9a9a94;
+      --border: rgba(0,0,0,0.1);
+      --border2: rgba(0,0,0,0.2);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --green: #0F6E56;
+      --green-bg: #E1F5EE;
+      --red: #A32D2D;
+      --red-bg: #FCEBEB;
+      --blue: #185FA5;
+      --blue-bg: #E6F1FB;
+      --amber: #633806;
+      --amber-bg: #FAEEDA;
+      --gray: #2C2C2A;
+      --gray-bg: #D3D1C7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --bg2: #2a2a28;
+        --bg3: #333330;
+        --text: #f0f0ea;
+        --text2: #a0a09a;
+        --text3: #707068;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --green: #5DCAA5;
+        --green-bg: #085041;
+        --red: #F09595;
+        --red-bg: #501313;
+        --blue: #85B7EB;
+        --blue-bg: #0C447C;
+        --amber: #FAC775;
+        --amber-bg: #412402;
+        --gray: #D3D1C7;
+        --gray-bg: #444441;
+      }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+    .app { max-width: 430px; margin: 0 auto; background: var(--bg3); min-height: 100vh; padding-bottom: 80px; }
+
+    /* Tab bar */
+    .tab-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: var(--bg); border-top: 0.5px solid var(--border); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .tab { flex: 1; padding: 12px 4px 10px; text-align: center; font-size: 10px; border: none; background: transparent; color: var(--text3); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .tab.active { color: var(--green); }
+    .tab-icon { font-size: 20px; }
+
+    .page { display: none; padding: 1rem; }
+    .page.active { display: block; }
+
+    /* Header */
+    .page-header { font-size: 22px; font-weight: 600; margin-bottom: 1.25rem; color: var(--text); }
+
+    /* Cards */
+    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 12px; }
+
+    /* Child card */
+    .child-header { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; flex-shrink: 0; }
+    .child-name { font-size: 17px; font-weight: 600; }
+    .child-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .points-big { font-size: 32px; font-weight: 600; margin-left: auto; }
+    .rank-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; display: inline-block; margin-left: 6px; vertical-align: middle; }
+
+    /* Progress bar */
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .bar-label { font-size: 13px; color: var(--text2); width: 65px; }
+    .bar-track { flex: 1; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .bar-pts { font-size: 12px; color: var(--text2); min-width: 36px; text-align: right; }
+
+    /* Section title */
+    .section-title { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin: 1.25rem 0 8px; }
+
+    /* Chip selector */
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .chip { font-size: 13px; padding: 6px 14px; border-radius: 99px; background: var(--bg); border: 0.5px solid var(--border2); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+    .chip.sel { background: var(--green-bg); color: var(--green); border-color: var(--green); font-weight: 500; }
+
+    /* Behavior buttons */
+    .behavior-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .beh-btn { padding: 12px; border-radius: var(--radius-md); border: 0.5px solid var(--border); background: var(--bg); font-size: 13px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-align: left; color: var(--text); transition: transform 0.1s; }
+    .beh-btn:active { transform: scale(0.96); }
+    .beh-pts { font-size: 16px; font-weight: 600; }
+    .beh-pts.pos { color: var(--green); }
+    .beh-pts.neg { color: var(--red); }
+
+    /* Log items */
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+    .log-item:last-child { border-bottom: none; }
+    .log-name { font-size: 14px; }
+    .log-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .log-pts { font-size: 15px; font-weight: 600; }
+    .log-pts.pos { color: var(--green); }
+    .log-pts.neg { color: var(--red); }
+
+    /* Reward cards */
+    .reward-row { display: flex; justify-content: space-between; align-items: center; }
+    .reward-name { font-size: 15px; font-weight: 500; }
+    .reward-cost { font-size: 12px; color: var(--text2); margin-top: 3px; }
+    .redeem-btn { padding: 7px 16px; border-radius: var(--radius-md); border: 0.5px solid var(--border2); background: transparent; font-size: 13px; cursor: pointer; color: var(--text); white-space: nowrap; }
+    .redeem-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .redeem-btn.ok { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 500; }
+
+    /* Settings */
+    .settings-row { display: flex; justify-content: space-between; align-items: center; }
+    .remove-chip { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); cursor: pointer; }
+    .input-row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .input-row input { flex: 1; padding: 10px 12px; border-radius: var(--radius-md); border: 0.5px solid var(--border2); font-size: 14px; background: var(--bg); color: var(--text); }
+    .input-row input:focus { outline: none; border-color: var(--green); }
+    .add-btn { padding: 10px 16px; border-radius: var(--radius-md); border: 0.5px solid var(--border2); background: transparent; font-size: 14px; cursor: pointer; color: var(--text); white-space: nowrap; }
+    .danger-btn { width: 100%; padding: 13px; border-radius: var(--radius-lg); border: 0.5px solid var(--red-bg); background: transparent; font-size: 14px; color: var(--red); cursor: pointer; margin-top: 1.5rem; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); color: white; padding: 11px 22px; border-radius: var(--radius-lg); font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; z-index: 999; }
+    .toast.show { opacity: 1; }
+
+    .empty-state { font-size: 14px; color: var(--text3); padding: 1.5rem 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="page-header">總覽</div>
+    <div id="children-cards"></div>
+    <div class="section-title">本週進度</div>
+    <div id="weekly-bars"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="page" id="page-log">
+    <div class="page-header">紀錄表現</div>
+    <div class="section-title">選擇小孩</div>
+    <div class="chip-row" id="log-child-select"></div>
+    <div class="section-title">加 / 扣分</div>
+    <div class="behavior-grid" id="behavior-grid"></div>
+    <div class="section-title" style="margin-top:1.5rem;">最近紀錄</div>
+    <div class="card" id="history-list"></div>
+  </div>
+
+  <!-- REWARDS -->
+  <div class="page" id="page-rewards">
+    <div class="page-header">兌換獎勵</div>
+    <div class="section-title">選擇小孩</div>
+    <div class="chip-row" id="reward-child-select"></div>
+    <div id="reward-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="page-header">設定</div>
+
+    <div class="section-title">小孩</div>
+    <div id="child-settings"></div>
+
+    <div class="section-title">表現項目</div>
+    <div class="input-row">
+      <input id="new-beh-name" placeholder="項目名稱" />
+      <input id="new-beh-pts" placeholder="分數" type="number" style="width:72px;flex:none;" />
+      <button class="add-btn" onclick="addBehavior()">新增</button>
+    </div>
+    <div id="behavior-settings"></div>
+
+    <div class="section-title">獎勵項目</div>
+    <div class="input-row">
+      <input id="new-rew-name" placeholder="獎勵名稱" />
+      <input id="new-rew-pts" placeholder="所需分數" type="number" style="width:90px;flex:none;" />
+      <button class="add-btn" onclick="addReward()">新增</button>
+    </div>
+    <div id="reward-settings"></div>
+
+    <button class="danger-btn" onclick="confirmReset()">重置所有分數（每週結算）</button>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="setPage('home')">
+      <span class="tab-icon">🏠</span>總覽
+    </button>
+    <button class="tab" onclick="setPage('log')">
+      <span class="tab-icon">✏️</span>紀錄
+    </button>
+    <button class="tab" onclick="setPage('rewards')">
+      <span class="tab-icon">🎁</span>獎勵
+    </button>
+    <button class="tab" onclick="setPage('settings')">
+      <span class="tab-icon">⚙️</span>設定
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT = {
+  children: [
+    { id: 1, name: 'Hudson', points: 0, color: 'blue' },
+    { id: 2, name: 'Mumu',   points: 0, color: 'amber' },
+  ],
+  behaviors: [
+    { id: 1, name: '做功課',   pts: 5 },
+    { id: 2, name: '整理房間', pts: 3 },
+    { id: 3, name: '主動幫忙', pts: 4 },
+    { id: 4, name: '頂嘴',     pts: -3 },
+    { id: 5, name: '搶玩具',   pts: -2 },
+  ],
+  rewards: [
+    { id: 1, name: '看30分鐘電視',   cost: 20 },
+    { id: 2, name: '去便利商店',     cost: 40 },
+    { id: 3, name: '選晚餐',         cost: 60 },
+    { id: 4, name: '延後睡覺30分鐘', cost: 80 },
+  ],
+  history: [],
+  selectedChild: 1,
+  rewardChild: 1,
+};
+
+const COLORS = {
+  blue:  { bg: 'var(--blue-bg)',  fg: 'var(--blue)' },
+  amber: { bg: 'var(--amber-bg)', fg: 'var(--amber)' },
+  green: { bg: 'var(--green-bg)', fg: 'var(--green)' },
+};
+
+let state;
+function save() { try { localStorage.setItem('hm-tracker', JSON.stringify(state)); } catch(e){} }
+function load() {
+  try {
+    const d = localStorage.getItem('hm-tracker');
+    state = d ? JSON.parse(d) : JSON.parse(JSON.stringify(DEFAULT));
+  } catch(e) { state = JSON.parse(JSON.stringify(DEFAULT)); }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'red' ? 'var(--red)' : type === 'blue' ? 'var(--blue)' : 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function setPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const idx = { home:0, log:1, rewards:2, settings:3 };
+  document.querySelectorAll('.tab')[idx[name]].classList.add('active');
+  render();
+}
+
+function render() { renderHome(); renderLog(); renderRewards(); renderSettings(); }
+
+function renderHome() {
+  const sorted = [...state.children].sort((a,b) => b.points - a.points);
+  const maxPts = Math.max(...state.children.map(c => c.points), 1);
+  const rankLabels = ['🥇 1st', '🥈 2nd', '🥉 3rd'];
+  const rankClasses = ['rank-1','rank-2',''];
+
+  let html = '';
+  sorted.forEach((c, i) => {
+    const col = COLORS[c.color] || COLORS.blue;
+    html += `<div class="card">
+      <div class="child-header">
+        <div class="avatar" style="background:${col.bg};color:${col.fg}">${c.name[0]}</div>
+        <div>
+          <div class="child-name">${c.name}
+            <span class="rank-badge" style="background:${col.bg};color:${col.fg}">${rankLabels[i]||''}</span>
+          </div>
+          <div class="child-sub">本週累積積分</div>
+        </div>
+        <div class="points-big" style="color:${col.fg}">${c.points}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('children-cards').innerHTML = html;
+
+  let bars = '';
+  sorted.forEach(c => {
+    const col = COLORS[c.color] || COLORS.blue;
+    const pct = Math.round(c.points / maxPts * 100);
+    bars += `<div class="bar-row">
+      <div class="bar-label">${c.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col.fg}"></div></div>
+      <div class="bar-pts">${c.points} 分</div>
+    </div>`;
+  });
+  document.getElementById('weekly-bars').innerHTML = bars;
+}
+
+function renderLog() {
+  document.getElementById('log-child-select').innerHTML =
+    state.children.map(c =>
+      `<span class="chip ${c.id===state.selectedChild?'sel':''}" onclick="selectChild(${c.id})">${c.name}</span>`
+    ).join('');
+
+  document.getElementById('behavior-grid').innerHTML =
+    state.behaviors.map(b => {
+      const cls = b.pts >= 0 ? 'pos' : 'neg';
+      const sign = b.pts >= 0 ? '+' : '';
+      return `<button class="beh-btn" onclick="addPoints(${b.id})">
+        <span style="font-size:14px">${b.name}</span>
+        <span class="beh-pts ${cls}">${sign}${b.pts}</span>
+      </button>`;
+    }).join('');
+
+  const recent = [...state.history].reverse().slice(0, 15);
+  document.getElementById('history-list').innerHTML = recent.length === 0
+    ? '<div class="empty-state">還沒有紀錄</div>'
+    : recent.map(h => {
+        const sign = h.pts >= 0 ? '+' : '';
+        const cls = h.pts >= 0 ? 'pos' : 'neg';
+        return `<div class="log-item">
+          <div><div class="log-name">${h.child} — ${h.name}</div><div class="log-meta">${h.time}</div></div>
+          <span class="log-pts ${cls}">${sign}${h.pts}</span>
+        </div>`;
+      }).join('');
+}
+
+function renderRewards() {
+  document.getElementById('reward-child-select').innerHTML =
+    state.children.map(c =>
+      `<span class="chip ${c.id===state.rewardChild?'sel':''}" onclick="selectRewardChild(${c.id})">${c.name}</span>`
+    ).join('');
+
+  const child = state.children.find(c => c.id === state.rewardChild);
+  const pts = child ? child.points : 0;
+  let html = `<div style="margin-bottom:1rem;font-size:14px;color:var(--text2)">目前積分：<strong style="color:var(--text);font-size:16px">${pts} 分</strong></div>`;
+  html += state.rewards.map(r => {
+    const ok = pts >= r.cost;
+    return `<div class="card reward-row">
+      <div><div class="reward-name">${r.name}</div><div class="reward-cost">需要 ${r.cost} 分</div></div>
+      <button class="redeem-btn ${ok?'ok':''}" ${ok?'':'disabled'} onclick="redeem(${r.id})">兌換</button>
+    </div>`;
+  }).join('');
+  document.getElementById('reward-list').innerHTML = html;
+}
+
+function renderSettings() {
+  document.getElementById('child-settings').innerHTML =
+    state.children.map(c => {
+      const col = COLORS[c.color] || COLORS.blue;
+      return `<div class="card">
+        <div class="settings-row">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar" style="width:34px;height:34px;font-size:15px;background:${col.bg};color:${col.fg}">${c.name[0]}</div>
+            <span style="font-size:15px;font-weight:500">${c.name}</span>
+          </div>
+          <span style="color:var(--text2);font-size:14px">${c.points} 分</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('behavior-settings').innerHTML =
+    state.behaviors.map(b => {
+      const cls = b.pts >= 0 ? 'pos' : 'neg';
+      const sign = b.pts >= 0 ? '+' : '';
+      return `<div class="card" style="margin-bottom:8px">
+        <div class="settings-row">
+          <span style="font-size:14px">${b.name}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="beh-pts ${cls}" style="font-size:14px">${sign}${b.pts}</span>
+            <span class="remove-chip" onclick="removeBehavior(${b.id})">移除</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('reward-settings').innerHTML =
+    state.rewards.map(r =>
+      `<div class="card" style="margin-bottom:8px">
+        <div class="settings-row">
+          <span style="font-size:14px">${r.name}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;color:var(--text2)">${r.cost} 分</span>
+            <span class="remove-chip" onclick="removeReward(${r.id})">移除</span>
+          </div>
+        </div>
+      </div>`
+    ).join('');
+}
+
+function selectChild(id) { state.selectedChild = id; renderLog(); }
+function selectRewardChild(id) { state.rewardChild = id; renderRewards(); }
+
+function addPoints(bId) {
+  const b = state.behaviors.find(x => x.id === bId);
+  const c = state.children.find(x => x.id === state.selectedChild);
+  if(!b || !c) return;
+  c.points = Math.max(0, c.points + b.pts);
+  const now = new Date();
+  state.history.push({
+    child: c.name, name: b.name, pts: b.pts,
+    time: now.toLocaleDateString('zh-TW') + ' ' + now.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'})
+  });
+  showToast(`${c.name} ${b.pts>=0?'+':''}${b.pts} 分！`, b.pts>=0?'green':'red');
+  save(); render();
+}
+
+function redeem(rId) {
+  const r = state.rewards.find(x => x.id === rId);
+  const c = state.children.find(x => x.id === state.rewardChild);
+  if(!r||!c||c.points<r.cost) return;
+  if(!confirm(`確定讓 ${c.name} 兌換「${r.name}」（扣 ${r.cost} 分）？`)) return;
+  c.points -= r.cost;
+  const now = new Date();
+  state.history.push({
+    child: c.name, name: `兌換：${r.name}`, pts: -r.cost,
+    time: now.toLocaleDateString('zh-TW') + ' ' + now.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'})
+  });
+  showToast(`兌換成功！${c.name} 剩 ${c.points} 分`);
+  save(); render();
+}
+
+function addBehavior() {
+  const name = document.getElementById('new-beh-name').value.trim();
+  const pts = parseInt(document.getElementById('new-beh-pts').value);
+  if(!name||isNaN(pts)) { showToast('請填寫名稱和分數','red'); return; }
+  state.behaviors.push({id: Date.now(), name, pts});
+  document.getElementById('new-beh-name').value = '';
+  document.getElementById('new-beh-pts').value = '';
+  showToast('新增成功！'); save(); render();
+}
+
+function removeBehavior(id) {
+  if(!confirm('確定移除這個項目？')) return;
+  state.behaviors = state.behaviors.filter(b => b.id !== id);
+  save(); render();
+}
+
+function addReward() {
+  const name = document.getElementById('new-rew-name').value.trim();
+  const cost = parseInt(document.getElementById('new-rew-pts').value);
+  if(!name||isNaN(cost)||cost<1) { showToast('請填寫名稱和分數','red'); return; }
+  state.rewards.push({id: Date.now(), name, cost});
+  document.getElementById('new-rew-name').value = '';
+  document.getElementById('new-rew-pts').value = '';
+  showToast('新增成功！'); save(); render();
+}
+
+function removeReward(id) {
+  if(!confirm('確定移除這個獎勵？')) return;
+  state.rewards = state.rewards.filter(r => r.id !== id);
+  save(); render();
+}
+
+function confirmReset() {
+  if(!confirm('確定要重置 Hudson 和 Mumu 的所有積分？此操作無法復原。')) return;
+  state.children.forEach(c => c.points = 0);
+  state.history = [];
+  showToast('已重置所有積分');
+  save(); render();
+}
+
+load(); render();
+</script>
+</body>
+</html>
