@@ -269,31 +269,23 @@ function setPage(name) {
 function render() { renderHome(); renderLog(); renderRewards(); renderSettings(); }
 
 function renderHome() {
-  const sorted = [...state.children].sort((a,b) => b.points - a.points);
   const maxPts = Math.max(...state.children.map(c => c.points), 1);
-  const rankLabels = ['🥇 1st', '🥈 2nd', '🥉 3rd'];
-  const rankClasses = ['rank-1','rank-2',''];
 
-  let html = '';
-  sorted.forEach((c, i) => {
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+  state.children.forEach(c => {
     const col = COLORS[c.color] || COLORS.blue;
-    html += `<div class="card">
-      <div class="child-header">
-        <div class="avatar" style="background:${col.bg};color:${col.fg}">${c.name[0]}</div>
-        <div>
-          <div class="child-name">${c.name}
-            <span class="rank-badge" style="background:${col.bg};color:${col.fg}">${rankLabels[i]||''}</span>
-          </div>
-          <div class="child-sub">本週累積積分</div>
-        </div>
-        <div class="points-big" style="color:${col.fg}">${c.points}</div>
-      </div>
+    html += `<div class="card" style="margin-bottom:0;text-align:center;padding:1.25rem 0.75rem;">
+      <div class="avatar" style="background:${col.bg};color:${col.fg};margin:0 auto 10px;width:52px;height:52px;font-size:22px;">${c.name[0]}</div>
+      <div class="child-name" style="font-size:16px;margin-bottom:4px;">${c.name}</div>
+      <div class="child-sub" style="margin-bottom:10px;">本週積分</div>
+      <div class="points-big" style="color:${col.fg};font-size:36px;margin-left:0;">${c.points}</div>
     </div>`;
   });
+  html += '</div>';
   document.getElementById('children-cards').innerHTML = html;
 
   let bars = '';
-  sorted.forEach(c => {
+  state.children.forEach(c => {
     const col = COLORS[c.color] || COLORS.blue;
     const pct = Math.round(c.points / maxPts * 100);
     bars += `<div class="bar-row">
